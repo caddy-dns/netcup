@@ -1,4 +1,4 @@
-# netcup DNS module for Caddy
+# [netcup](https://www.netcup.de/) DNS module for Caddy
 
 This package contains a DNS provider module for [Caddy](https://github.com/caddyserver/caddy). It can be used to manage DNS records with the [netcup DNS API](https://ccp.netcup.net/run/webservice/servers/endpoint.php).
 
