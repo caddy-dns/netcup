@@ -59,6 +59,6 @@ your.domain.com {
 		propagation_delay 600s
 		resolvers 1.1.1.1
 	}
-	reverse_proxy http://localhost:8000
+	...
 }
 ```
