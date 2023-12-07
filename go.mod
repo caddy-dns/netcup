@@ -1,9 +1,9 @@
 module github.com/caddy-dns/netcup
 
-go 1.17
+go 1.20
 
 require (
-	github.com/caddyserver/caddy/v2 v2.4.6
+	github.com/caddyserver/caddy/v2 v2.6.4
 	github.com/libdns/netcup v0.1.0
 )
 
