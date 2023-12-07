@@ -32,9 +32,7 @@ or with the Caddyfile:
 
 ```
 your.domain.com {
-
 	...
-
 	tls {
 		dns netcup {
 			customer_number {env.NETCUP_CUSTOMER_NUMBER}
@@ -42,8 +40,25 @@ your.domain.com {
 			api_password {env.NETCUP_API_PASSWORD}
 		}
 	}
-
 	...
+}
+```
+## Attention: Slow Netcup propagation time
 
+NOTE: You may need to set an unexpectedly high propagation time (≥ 900 seconds) to give the netcup DNS time to propagate the entries! This may be annoying when calling certbot manually but should not be a problem in automated setups. In exceptional cases, 20 minutes may be required. See [#28](https://github.com/coldfix/certbot-dns-netcup/issues/28).
+
+Use this config, (related [Caddy Forum Post](https://caddy.community/t/unable-to-issue-a-ssl-cert-via-acme-dns-for-netcup/21807)):
+```
+your.domain.com {
+	...
+	tls {
+		dns netcup {
+			...
+		}
+		propagation_timeout 900s
+		propagation_delay 600s
+		resolvers 1.1.1.1
+	}
+	reverse_proxy http://localhost:8000
 }
 ```
