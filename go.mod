@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/caddyserver/caddy/v2 v2.4.6
-	github.com/libdns/netcup v0.1.0
+	github.com/libdns/netcup v0.1.1-0.20240604141625-bdf109361f52
 )
 
 require (
@@ -14,7 +14,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
-	github.com/libdns/libdns v0.2.1 // indirect
+	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mholt/acmez v1.0.1 // indirect
 	github.com/miekg/dns v1.1.45 // indirect
