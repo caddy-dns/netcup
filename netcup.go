@@ -30,13 +30,32 @@ func (p *Provider) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// UnmarshalCaddyfile sets up the DNS provider from Caddyfile tokens. Syntax:
+// UnmarshalCaddyfile sets up the DNS provider from Caddyfile tokens.
 //
-// netcup {
+// netcup exposes two different DNS APIs, and which one this module uses is
+// chosen automatically based on which fields are set, so the same "netcup"
+// directive works for both:
+//
+//   - Legacy API, for domains using "classic" DNS (the "DNS" tab in the
+//     CCP): set customer_number, api_key and api_password.
+//
+//     netcup {
 //     customer_number <customer_number>
 //     api_key <api_key>
 //     api_password <api_password>
-// }
+//     }
+//
+//   - REST API, for domains using CloudDNS (the "CloudDNS" tab in the CCP):
+//     set only api_key (the key from the CCP's "API Keys" section, not
+//     "Legacy API Keys"), and omit api_password. This API can only manage
+//     "_acme-challenge" records, which is exactly what's needed for the
+//     ACME dns-01 challenge. customer_number is not used in this mode.
+//
+//     netcup {
+//     api_key <api_key>
+//     }
+//
+// See https://github.com/libdns/netcup for details on both modes.
 func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		if d.NextArg() {
@@ -70,14 +89,17 @@ func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		}
 	}
-	if p.Provider.CustomerNumber == "" {
-		return d.Err("missing customer number")
-	}
 	if p.Provider.APIKey == "" {
 		return d.Err("missing API key")
 	}
-	if p.Provider.APIPassword == "" {
-		return d.Err("missing API password")
+	// api_password and customer_number belong together (legacy API); if
+	// either is set, both must be, so that a typo'd/forgotten field can't
+	// silently switch this into REST-API mode (which supports far less).
+	if p.Provider.APIPassword != "" && p.Provider.CustomerNumber == "" {
+		return d.Err("missing customer number (required together with api_password to use the legacy netcup API)")
+	}
+	if p.Provider.CustomerNumber != "" && p.Provider.APIPassword == "" {
+		return d.Err("missing API password (required together with customer_number to use the legacy netcup API; omit both to use the new REST API for CloudDNS domains instead)")
 	}
 	return nil
 }
