@@ -92,3 +92,60 @@ your.domain.com {
 	...
 }
 ```
+
+## Building with Docker (xcaddy)
+
+Caddy doesn't ship with third-party DNS modules built in; they're compiled in using [xcaddy](https://github.com/caddyserver/xcaddy). The [official Caddy Docker image](https://hub.docker.com/_/caddy) has a `:builder` variant with xcaddy preinstalled, which is the easiest way to build a custom Caddy binary with this module in a multi-stage `Dockerfile`:
+
+```dockerfile
+FROM caddy:builder AS builder
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    xcaddy build \
+    --with github.com/caddy-dns/netcup
+
+FROM caddy
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+```
+
+The builder stage compiles a `caddy` binary with this module linked in; the final stage copies just that binary into a plain `caddy` image, keeping the final image small. You can add more `--with` lines for other Caddy modules (other DNS providers, plugins, etc.) in the same `xcaddy build` call.
+
+### Using CloudDNS (REST API): pointing xcaddy at a patched libdns/netcup
+
+This module depends on [libdns/netcup](https://github.com/libdns/netcup) for the actual netcup API calls (see [What does caddy-dns do, and what's libdns for?](#what-does-this-module-do-vs-libdnsnetcup) below). At the time of writing, the upstream `libdns/netcup` only supports netcup's legacy DNS API, not the newer CloudDNS REST API — see [libdns/netcup#4](https://github.com/libdns/netcup/issues/4). If your domain uses CloudDNS and upstream support isn't merged yet, you can build against a patched fork instead, without changing anything else in this module or your Caddyfile:
+
+```dockerfile
+FROM caddy:builder AS builder
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    xcaddy build \
+    --with github.com/caddy-dns/netcup \
+    --with github.com/libdns/netcup
+
+FROM caddy
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+```
+
+The second `--with module=replacement` line is an xcaddy [replace directive](https://github.com/caddyserver/xcaddy#in-line-replacements): it tells the Go build to substitute `github.com/YOUR-USER/libdns-netcup` (your fork, or any fork with CloudDNS support) wherever `github.com/caddy-dns/netcup` imports `github.com/libdns/netcup`. This module's own code and Caddyfile syntax stay exactly the same either way — replace `YOUR-USER` with your GitHub username (or point it at any other compatible fork/branch) once you have one published, then configure the `netcup` provider as usual:
+
+```
+bw.your.domain.com {
+	tls {
+		dns netcup {
+			api_key {env.NETCUP_API_KEY}
+		}
+	}
+}
+```
+
+leaving out `customer_number` and `api_password` is what selects the REST/CloudDNS code path in a patched `libdns/netcup`; see [Which API do I need?](#which-api-do-i-need) above.
+
+## What does this module do vs. libdns/netcup?
+
+This repository (`caddy-dns/netcup`) is a thin adapter: it registers a `netcup` DNS provider module with Caddy and translates Caddyfile/JSON config into a [`libdns/netcup`](https://github.com/libdns/netcup) `Provider` struct. It contains no netcup-specific API logic itself.
+
+[`libdns/netcup`](https://github.com/libdns/netcup) is where the actual netcup API calls live (logging in, reading/writing DNS records), implemented against the generic [libdns](https://github.com/libdns/libdns) interfaces so the same code can be reused by other Go programs, not just Caddy. If you ever need to fix or extend netcup-specific behavior (like CloudDNS support above), that's the repository to change — this one (`caddy-dns/netcup`) only needs changes for Caddyfile/JSON syntax.
